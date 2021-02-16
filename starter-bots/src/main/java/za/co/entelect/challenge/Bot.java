@@ -30,23 +30,103 @@ public class Bot {
     }
 
     public Command run() {
-
-        Worm enemyWorm = getFirstWormInRange();
-        if (enemyWorm != null) {
-            Direction direction = resolveDirection(currentWorm.position, enemyWorm.position);
-            return new ShootCommand(direction);
+        // Assign Leader Worm
+        MyWorm leaderWorm = setLeaderWorm();
+        if (currentWorm == leaderWorm) {
+            // currentWorm is the Leader
+            if (isInMiddle()) {
+                // If in middle then check for nearby enemy
+                Worm enemyWorm = getFirstWormInRange();
+                if (enemyWorm != null) {
+                    Direction direction = resolveDirection(currentWorm.position, enemyWorm.position);
+                    return new ShootCommand(direction);
+                }
+                // Else random move
+                List<Cell> surroundingBlocks = getSurroundingCells(currentWorm.position.x, currentWorm.position.y);
+                int cellIdx = random.nextInt(surroundingBlocks.size());
+                Cell block = surroundingBlocks.get(cellIdx);
+                if (block.type == CellType.AIR) {
+                    return new MoveCommand(block.x, block.y);
+                } else if (block.type == CellType.DIRT) {
+                    return new DigCommand(block.x, block.y);
+                }
+            }
+            else {
+                // Not in range middle of the map
+                if (isLavaNear()) {
+                    // If near lava, move to middle
+                    List<Cell> surroundingBlocks = getSurroundingCells(currentWorm.position.x, currentWorm.position.y);
+                    int cellIdx = cellDirection(surroundingBlocks,16,16);
+                    Cell block = surroundingBlocks.get(cellIdx);
+                    if (block.type == CellType.AIR) {
+                        return new MoveCommand(block.x, block.y);
+                    }   else if (block.type == CellType.DIRT) {
+                        return new DigCommand(block.x, block.y);
+                    }
+                }
+                else {
+                    // Not near, check for nearby enemy
+                    Worm enemyWorm = getFirstWormInRange();
+                    if (enemyWorm != null) {
+                        Direction direction = resolveDirection(currentWorm.position, enemyWorm.position);
+                        return new ShootCommand(direction);
+                    }
+                    // Else random move
+                    List<Cell> surroundingBlocks = getSurroundingCells(currentWorm.position.x, currentWorm.position.y);
+                    int cellIdx = random.nextInt(surroundingBlocks.size());
+                    Cell block = surroundingBlocks.get(cellIdx);
+                    if (block.type == CellType.AIR) {
+                        return new MoveCommand(block.x, block.y);
+                    } else if (block.type == CellType.DIRT) {
+                        return new DigCommand(block.x, block.y);
+                    }
+                }
+            }
         }
-
-        List<Cell> surroundingBlocks = getSurroundingCells(currentWorm.position.x, currentWorm.position.y);
-        int cellIdx = random.nextInt(surroundingBlocks.size());
-
-        Cell block = surroundingBlocks.get(cellIdx);
-        if (block.type == CellType.AIR) {
-            return new MoveCommand(block.x, block.y);
-        } else if (block.type == CellType.DIRT) {
-            return new DigCommand(block.x, block.y);
+        else {
+            // currentWorm is not the Leader
+            if (isLeaderNear(leaderWorm)) {
+                if (isLavaNear()) {
+                    // If near lava, move to middle
+                    List<Cell> surroundingBlocks = getSurroundingCells(currentWorm.position.x, currentWorm.position.y);
+                    int cellIdx = cellDirection(surroundingBlocks,16,16);
+                    Cell block = surroundingBlocks.get(cellIdx);
+                    if (block.type == CellType.AIR) {
+                        return new MoveCommand(block.x, block.y);
+                    }   else if (block.type == CellType.DIRT) {
+                        return new DigCommand(block.x, block.y);
+                    }
+                }
+                else {
+                    // Not near, check for nearby enemy
+                    Worm enemyWorm = getFirstWormInRange();
+                    if (enemyWorm != null) {
+                        Direction direction = resolveDirection(currentWorm.position, enemyWorm.position);
+                        return new ShootCommand(direction);
+                    }
+                    // Else random move
+                    List<Cell> surroundingBlocks = getSurroundingCells(currentWorm.position.x, currentWorm.position.y);
+                    int cellIdx = random.nextInt(surroundingBlocks.size());
+                    Cell block = surroundingBlocks.get(cellIdx);
+                    if (block.type == CellType.AIR) {
+                        return new MoveCommand(block.x, block.y);
+                    } else if (block.type == CellType.DIRT) {
+                        return new DigCommand(block.x, block.y);
+                    }
+                }
+            }
+            else {
+                // Not near Leader, move to Leader
+                List<Cell> surroundingBlocks = getSurroundingCells(currentWorm.position.x, currentWorm.position.y);
+                int cellIdx = cellDirection(surroundingBlocks,leaderWorm.position.x,leaderWorm.position.y);
+                Cell block = surroundingBlocks.get(cellIdx);
+                if (block.type == CellType.AIR) {
+                    return new MoveCommand(block.x, block.y);
+                }   else if (block.type == CellType.DIRT) {
+                    return new DigCommand(block.x, block.y);
+                }
+            }
         }
-
         return new DoNothingCommand();
     }
 
@@ -75,6 +155,7 @@ public class Bot {
         }
     }
 
+    /*
     private boolean isTeammateNear() {
         List<Cell> surroundingCells = getSurroundingCells(3,currentWorm.position.x,currentWorm.position.y);
         boolean teammateNear = false;
@@ -83,6 +164,19 @@ public class Bot {
                     surroundingCells.contains(gameState.map[myWorm.position.y][myWorm.position.x]);
         }
         return teammateNear;
+    }
+    */
+
+    private boolean isLeaderNear(MyWorm LeaderWorm) {
+        // Check if Leader Worm in range 3x3 of currentWorm position
+        // Preconditions currentWorm is not the LeaderWorm
+        List<Cell> surroundingCells = getSurroundingCells(3,currentWorm.position.x,currentWorm.position.y);
+        return surroundingCells.contains(gameState.map[LeaderWorm.position.y][LeaderWorm.position.x]);
+    }
+
+    private boolean isInMiddle() {
+        List<Cell> middleBlocks = getSurroundingCells(3, 16, 16);
+        return middleBlocks.contains(gameState.map[currentWorm.position.y][currentWorm.position.x]);
     }
 
     private boolean isLavaNear() {
@@ -179,6 +273,20 @@ public class Bot {
     private boolean isValidCoordinate(int x, int y) {
         return x >= 0 && x < gameState.mapSize
                 && y >= 0 && y < gameState.mapSize;
+    }
+
+    private int cellDirection(List<Cell> surroundingBlocks, int target_x, int target_y) {
+        // Return idx of surrounding Blocks where closest to target coordinate
+        int distance = euclideanDistance(surroundingBlocks.get(0).x, surroundingBlocks.get(0).y, target_x, target_y);
+        int retIdx = 0;
+        for (int idx = 1; idx < surroundingBlocks.size(); idx++) {
+            int distance2 = euclideanDistance(surroundingBlocks.get(idx).x, surroundingBlocks.get(idx).y, target_x, target_y);
+            if (distance2 < distance) {
+                distance = distance2;
+                retIdx = idx;
+            }
+        }
+        return retIdx;
     }
 
     private Direction resolveDirection(Position a, Position b) {
