@@ -157,6 +157,21 @@ public class Bot {
         return cells;
     }
 
+    private List<Cell> getSurroundingCells(int k, int x, int y) {
+        // Get Surrounding Cells in kx,Ky
+        ArrayList<Cell> cells = new ArrayList<>();
+        for (int i = x - k; i <= x + k; i++) {
+            for (int j = y - k; j <= y + k; j++) {
+                // Don't include the current position
+                if (i != x && j != y && isValidCoordinate(i, j)) {
+                    cells.add(gameState.map[j][i]);
+                }
+            }
+        }
+
+        return cells;
+    }
+
     private int euclideanDistance(int aX, int aY, int bX, int bY) {
         return (int) (Math.sqrt(Math.pow(aX - bX, 2) + Math.pow(aY - bY, 2)));
     }
