@@ -50,6 +50,51 @@ public class Bot {
         return new DoNothingCommand();
     }
 
+    private MyWorm setLeaderWorm() {
+        int min_health = 100;
+        for (Worm myWorm: gameState.myPlayer.worms) {
+            if (myWorm.health < min_health) {
+                min_health = myWorm.health;
+            }
+        }
+
+        if (min_health == 100) {
+            // Set Commmando for Leader
+            return Arrays.stream(gameState.myPlayer.worms)
+                    .filter(myWorm -> myWorm.id == 0)
+                    .findFirst()
+                    .get();
+        }
+        else {
+            // Set Worm with lowest health for Leader
+            int finalMin_health = min_health;
+            return Arrays.stream(gameState.myPlayer.worms)
+                    .filter(myWorm -> myWorm.health == finalMin_health)
+                    .findFirst()
+                    .get();
+        }
+    }
+
+    private boolean isTeammateNear() {
+        List<Cell> surroundingCells = getSurroundingCells(3,currentWorm.position.x,currentWorm.position.y);
+        boolean teammateNear = false;
+        for (Worm myWorm: gameState.myPlayer.worms) {
+            teammateNear = teammateNear ||
+                    surroundingCells.contains(gameState.map[myWorm.position.y][myWorm.position.x]);
+        }
+        return teammateNear;
+    }
+
+    private boolean isLavaNear() {
+        List<Cell> surroundingBlocks = getSurroundingCells(3, currentWorm.position.x, currentWorm.position.y);
+        for (Cell block : surroundingBlocks) {
+            if (block.type == CellType.LAVA) {
+                return true;
+            }
+        }
+        return false;
+    }
+
     private Worm getFirstWormInRange() {
 
         Set<String> cells = constructFireDirectionLines(currentWorm.weapon.range)
