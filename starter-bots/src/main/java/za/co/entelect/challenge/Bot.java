@@ -141,7 +141,7 @@ public class Bot {
         if (min_health == 100) {
             // Set Commmando for Leader
             return Arrays.stream(gameState.myPlayer.worms)
-                    .filter(myWorm -> myWorm.id == 0)
+                    .filter(myWorm -> myWorm.id == 1)
                     .findFirst()
                     .get();
         }
