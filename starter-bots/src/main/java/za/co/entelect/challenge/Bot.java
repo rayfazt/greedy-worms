@@ -2,9 +2,7 @@ package za.co.entelect.challenge;
 
 import za.co.entelect.challenge.command.*;
 import za.co.entelect.challenge.entities.*;
-import za.co.entelect.challenge.enums.CellType;
-import za.co.entelect.challenge.enums.Direction;
-import za.co.entelect.challenge.enums.PowerUpType;
+import za.co.entelect.challenge.enums.*;
 
 import java.util.*;
 import java.util.stream.Collectors;
@@ -35,26 +33,7 @@ public class Bot {
         if (currentWorm == leaderWorm) { // currentWorm is the Leader
             if (!isLavaNear()) {
                 // Not near, check for nearby enemy
-                Worm enemyWorm;
-                if (currentWorm.id == 2) {
-                    // Agent
-                    enemyWorm = getFirstWormInRange();
-                    if (enemyWorm != null) {
-                        return new BananaCommand(enemyWorm.position.x, enemyWorm.position.y);
-                    }
-                }
-                else if (currentWorm.id == 3) {
-                    // Technologist
-                    enemyWorm = getFirstWormInRange();
-                    if (enemyWorm != null) {
-                        return new SnowballCommand(enemyWorm.position.x, enemyWorm.position.y);
-                    }
-                }
-                enemyWorm = getFirstWormInRange();
-                if (enemyWorm != null) {
-                    Direction direction = resolveDirection(currentWorm.position, enemyWorm.position);
-                    return new ShootCommand(direction);
-                }
+                return attackFirstWorm();
             }
             // If near lava, move to middle
             return moveToMiddleStrategy();
@@ -67,21 +46,7 @@ public class Bot {
                     return moveToMiddleStrategy();
                 }
                 else {
-                    // Not near, check for nearby enemy
-                    Worm enemyWorm = getFirstWormInRange();
-                    if (enemyWorm != null) {
-                        Direction direction = resolveDirection(currentWorm.position, enemyWorm.position);
-                        return new ShootCommand(direction);
-                    }
-                    // Else random move (?)
-                    List<Cell> surroundingBlocks = getSurroundingCells(currentWorm.position.x, currentWorm.position.y);
-                    int cellIdx = random.nextInt(surroundingBlocks.size());
-                    Cell block = surroundingBlocks.get(cellIdx);
-                    if (block.type == CellType.AIR) {
-                        return new MoveCommand(block.x, block.y);
-                    } else if (block.type == CellType.DIRT) {
-                        return new DigCommand(block.x, block.y);
-                    }
+                    return attackFirstWorm();
                 }
             }
             else {
@@ -89,7 +54,6 @@ public class Bot {
                 return followWormStrategy(leaderWorm);
             }
         }
-        return new DoNothingCommand();
     }
 
     private MyWorm setLeaderWorm() {
@@ -359,6 +323,38 @@ public class Bot {
         if (block.type == CellType.AIR) {
             return new MoveCommand(block.x, block.y);
         }   else if (block.type == CellType.DIRT) {
+            return new DigCommand(block.x, block.y);
+        }
+        return new DoNothingCommand();
+    }
+
+    private Command attackFirstWorm() {
+        // Will attack firstWormInRange if found
+        // If not : Not Specified (Dig/Move Randomly)
+        if (currentWorm.id == 2 && currentWorm.banana.count > 0) {
+            // Agent
+            Worm enemyWorm = getWormInRangeBanana();
+            if (enemyWorm != null) {
+                return new BananaCommand(enemyWorm.position.x, enemyWorm.position.y);
+            }
+        } else if (currentWorm.id == 3 && currentWorm.snowball.count > 0) {
+            // Technologist
+            Worm enemyWorm = getWormInRangeSnowball();
+            if (enemyWorm != null) {
+                return new SnowballCommand(enemyWorm.position.x, enemyWorm.position.y);
+            }
+        }
+        Worm enemyWorm = getFirstWormInRange();
+        if (enemyWorm != null) {
+            Direction direction = resolveDirection(currentWorm.position, enemyWorm.position);
+            return new ShootCommand(direction);
+        }
+        List<Cell> surroundingBlocks = getSurroundingCells(currentWorm.position.x, currentWorm.position.y);
+        int cellIdx = random.nextInt(surroundingBlocks.size());
+        Cell block = surroundingBlocks.get(cellIdx);
+        if (block.type == CellType.AIR) {
+            return new MoveCommand(block.x, block.y);
+        } else if (block.type == CellType.DIRT) {
             return new DigCommand(block.x, block.y);
         }
         return new DoNothingCommand();
