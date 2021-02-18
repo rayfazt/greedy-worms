@@ -29,37 +29,48 @@ public class Bot {
     }
 
     public Command run() {
-        MyWorm leaderWorm = setLeaderWorm(); // Assign Leader Worm
-        if (currentWorm == leaderWorm) { // currentWorm is the Leader
-            if (!isLavaNear()) {
-                // Not near, check for nearby enemy
-                return attackFirstWorm();
-            }
-            // If near lava, move to middle
-            return moveToMiddleStrategy();
-        }
-        else {
-            // currentWorm is not the Leader
-            if (isLeaderNear(leaderWorm)) {
-                if (isLavaNear()) {
-                    // If near lava, move to middle
-                    return moveToMiddleStrategy();
-                }
-                else {
-                    return attackFirstWorm();
-                }
+        if (gameState.currentRound <= 80) {
+            if (isLavaNear()) {
+                // Move to Middle
+                return moveToMiddleStrategy();
             }
             else {
-                // Not near Leader, move to Leader
-                return followWormStrategy(leaderWorm);
+                // Not near lava
+                Worm enemyWorm = getEnemy();
+                if(enemyWorm != null) {
+                    Direction direction = resolveDirection(currentWorm.position, enemyWorm.position);
+                    return moveToOtherDirection(direction);
+                }
+                return digStrategy();
             }
         }
+        // gameState.currentRound > 80
+        if (currentWorm.id == 2 && currentWorm.banana.count > 0) {
+            // Agent
+            Worm enemyWorm = getWormInRangeBanana();
+            if (enemyWorm != null) {
+                return new BananaCommand(enemyWorm.position.x, enemyWorm.position.y);
+            }
+        } else if (currentWorm.id == 3 && currentWorm.snowball.count > 0) {
+            // Technologist
+            Worm enemyWorm = getWormInRangeSnowball();
+            if (enemyWorm != null) {
+                return new SnowballCommand(enemyWorm.position.x, enemyWorm.position.y);
+            }
+        }
+        Worm enemyWorm = getFirstWormInRange();
+        if (enemyWorm != null) {
+            Direction direction = resolveDirection(currentWorm.position, enemyWorm.position);
+            return new ShootCommand(direction);
+        }
+        Worm targetWorm = setTargetWorm();
+        return followWormStrategy(targetWorm);
     }
 
     private MyWorm setLeaderWorm() {
         int min_health = 100;
         for (Worm myWorm: gameState.myPlayer.worms) {
-            if (myWorm.health < min_health) {
+            if (myWorm.health < min_health && min_health != 0) {
                 min_health = myWorm.health;
             }
         }
@@ -79,6 +90,21 @@ public class Bot {
                     .findFirst()
                     .get();
         }
+    }
+
+    private Worm setTargetWorm() {
+        int min_health = opponent.worms[0].health;
+        for (int i = 1; i < 3; i++) {
+            if (opponent.worms[i].health < min_health && min_health != 0) {
+                min_health = opponent.worms[i].health;
+            }
+        }
+        // Set Worm with lowest health for Leader
+        int finalMin_health = min_health;
+        return Arrays.stream(opponent.worms)
+                .filter(enemyWorm -> enemyWorm.health == finalMin_health)
+                .findFirst()
+                .get();
     }
 
     private boolean isLeaderNear(MyWorm LeaderWorm) {
@@ -101,6 +127,43 @@ public class Bot {
             }
         }
         return false;
+    }
+
+    private boolean isDirtInRange() {
+        List<Cell> surroundingBlocks = getSurroundingCells(currentWorm.diggingRange, currentWorm.position.x, currentWorm.position.y);
+        for (Cell block : surroundingBlocks) {
+            if (block.type == CellType.DIRT) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    private Worm getEnemy() {
+        for (Worm enemyWorm: opponent.worms) {
+            if(enemyWorm.id == 2 || enemyWorm.id == 3) {
+                Set<String> cells = constructFireDirectionLines(5, enemyWorm.position.x, enemyWorm.position.y)
+                        .stream()
+                        .flatMap(Collection::stream)
+                        .map(cell -> String.format("%d_%d", cell.x, cell.y))
+                        .collect(Collectors.toSet());
+
+                String myPosition = String.format("%d_%d", currentWorm.position.x, currentWorm.position.y);
+                if (cells.contains(myPosition)) {
+                    return enemyWorm;
+                }
+            }
+            Set<String> cells = constructFireDirectionLines(4, enemyWorm.position.x, enemyWorm.position.y)
+                    .stream()
+                    .flatMap(Collection::stream)
+                    .map(cell -> String.format("%d_%d", cell.x, cell.y))
+                    .collect(Collectors.toSet());
+            String myPosition = String.format("%d_%d", currentWorm.position.x, currentWorm.position.y);
+            if (cells.contains(myPosition)) {
+                return enemyWorm;
+            }
+        }
+        return null;
     }
 
     private Worm getWormInRangeSnowball() {
@@ -316,6 +379,54 @@ public class Bot {
         return new DoNothingCommand();
     }
 
+    private Command moveToOtherDirection(Direction d) {
+        int i = 0;
+        int j = 0;
+        switch(d){
+            case E:
+                i = -1;
+                j = 0;
+                break;
+            case N:
+                i = 0;
+                j = 1;
+                break;
+            case S:
+                i = 0;
+                j = -1;
+                break;
+            case W:
+                i = 1;
+                j = 0;
+                break;
+            case NE:
+                i = -1;
+                j = 1;
+                break;
+            case NW:
+                i = 1;
+                j = 1;
+                break;
+            case SE:
+                i = -1;
+                j = -1;
+                break;
+            case SW:
+                i = 1;
+                j = -1;
+                break;
+        }
+        if (isValidCoordinate(currentWorm.position.x+i, currentWorm.position.y+j)) {
+            Cell block = gameState.map[currentWorm.position.y+j][currentWorm.position.x+i];
+            if (block.type == CellType.AIR) {
+                return new MoveCommand(block.x, block.y);
+            }   else if (block.type == CellType.DIRT) {
+                return new DigCommand(block.x, block.y);
+            }
+        }
+        return new DoNothingCommand();
+    }
+
     private Command followWormStrategy(MyWorm leaderWorm) {
         List<Cell> surroundingBlocks = getSurroundingCells(currentWorm.position.x, currentWorm.position.y);
         int cellIdx = cellDirection(surroundingBlocks,leaderWorm.position.x,leaderWorm.position.y);
@@ -326,6 +437,28 @@ public class Bot {
             return new DigCommand(block.x, block.y);
         }
         return new DoNothingCommand();
+    }
+
+    private Command followWormStrategy(Worm targetWorm) {
+        List<Cell> surroundingBlocks = getSurroundingCells(currentWorm.position.x, currentWorm.position.y);
+        int cellIdx = cellDirection(surroundingBlocks,targetWorm.position.x,targetWorm.position.y);
+        Cell block = surroundingBlocks.get(cellIdx);
+        if (block.type == CellType.AIR) {
+            return new MoveCommand(block.x, block.y);
+        }   else if (block.type == CellType.DIRT) {
+            return new DigCommand(block.x, block.y);
+        }
+        return new DoNothingCommand();
+    }
+
+    private Command digStrategy() {
+        List<Cell> surroundingBlocks = getSurroundingCells(currentWorm.diggingRange, currentWorm.position.x, currentWorm.position.y);
+        for (Cell block : surroundingBlocks) {
+            if (block.type == CellType.DIRT) {
+                return new DigCommand(block.x, block.y);
+            }
+        }
+        return moveToMiddleStrategy();
     }
 
     private Command attackFirstWorm() {
@@ -349,14 +482,16 @@ public class Bot {
             Direction direction = resolveDirection(currentWorm.position, enemyWorm.position);
             return new ShootCommand(direction);
         }
-        List<Cell> surroundingBlocks = getSurroundingCells(currentWorm.position.x, currentWorm.position.y);
-        int cellIdx = random.nextInt(surroundingBlocks.size());
-        Cell block = surroundingBlocks.get(cellIdx);
-        if (block.type == CellType.AIR) {
-            return new MoveCommand(block.x, block.y);
-        } else if (block.type == CellType.DIRT) {
-            return new DigCommand(block.x, block.y);
+        else {
+            if(isDirtInRange()) {
+                List<Cell> surroundingBlocks = getSurroundingCells(currentWorm.position.x, currentWorm.position.y);
+                for (Cell block:surroundingBlocks) {
+                    if(block.type == CellType.DIRT) {
+                        return new DigCommand(block.x, block.y);
+                    }
+                }
+            }
+            return moveToMiddleStrategy();
         }
-        return new DoNothingCommand();
     }
 }
