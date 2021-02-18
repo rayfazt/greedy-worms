@@ -19,7 +19,8 @@ Greedy yang digunakan adalah greedy by teammate location. Fokus utama adalah men
 * Setelah selesai, build dengan mengklik Maven di sudut kanan atas IntelliJ Idea, lalu klik java-sample-bot > Lifecycle > Install
 * Akan dibuat folder "target" di directory yang sama dengan source, bot yang dihasilkan ada di dalam target dengan nama "java-sample-bot-jar-with-dependencies.jar"
 * Untuk Windows, jalankan "run.bat". Untuk UNIX, jalankan "run.sh".
-* By default, permainan akan dijalankan di command line. Disarankan menggunakan [visualizer](https://github.com/dlweatherhead/entelect-challenge-2019-visualiser/releases/tag/v1.0f1) untuk melihat jalannya permainan dengan jelas.
+* By default, pertandingan akan dilakukan melawan reference bot yang terdapat dalam folder reference-bot. Konfigurasi dapat dilakukan dengan mengedit file "game-runner-config.json". Profil bot dapat diubah dengan memodifikasi "bot.json" di folder starter-bots.
+* By default, program dijalankan di command line. Disarankan menggunakan [visualizer](https://github.com/dlweatherhead/entelect-challenge-2019-visualiser/releases/tag/v1.0f1) untuk melihat jalannya permainan dengan jelas.
 
 ## Author
 Made with :heart: by:
