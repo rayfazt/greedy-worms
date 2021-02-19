@@ -46,6 +46,7 @@ public class Bot {
                     return moveToMiddleStrategy();
                 }
                 else {
+                    // Find near worm
                     return attackFirstWorm();
                 }
             }
@@ -88,12 +89,8 @@ public class Bot {
         return surroundingCells.contains(gameState.map[LeaderWorm.position.y][LeaderWorm.position.x]);
     }
 
-    private boolean isInMiddle() {
-        List<Cell> middleBlocks = getSurroundingCells(3, 16, 16);
-        return middleBlocks.contains(gameState.map[currentWorm.position.y][currentWorm.position.x]);
-    }
-
     private boolean isLavaNear() {
+        // Check if worm in range 3x3 of lava
         List<Cell> surroundingBlocks = getSurroundingCells(3, currentWorm.position.x, currentWorm.position.y);
         for (Cell block : surroundingBlocks) {
             if (block.type == CellType.LAVA) {
@@ -160,6 +157,7 @@ public class Bot {
     }
 
     private Worm getFirstWormInRange() {
+        // Finding First Worm in Range of Shoot
         Set<String> cells = constructFireDirectionLines(currentWorm.weapon.range)
                 .stream()
                 .flatMap(Collection::stream)
@@ -176,6 +174,7 @@ public class Bot {
     }
 
     private List<List<Cell>> constructFireDirectionLines(int range) {
+        // Return list of cell on fire direction lines
         List<List<Cell>> directionLines = new ArrayList<>();
         for (Direction direction : Direction.values()) {
             List<Cell> directionLine = new ArrayList<>();
@@ -317,6 +316,7 @@ public class Bot {
     }
 
     private Command followWormStrategy(MyWorm leaderWorm) {
+        // Assign worm to follow leaderWorm
         List<Cell> surroundingBlocks = getSurroundingCells(currentWorm.position.x, currentWorm.position.y);
         int cellIdx = cellDirection(surroundingBlocks,leaderWorm.position.x,leaderWorm.position.y);
         Cell block = surroundingBlocks.get(cellIdx);
@@ -330,7 +330,7 @@ public class Bot {
 
     private Command attackFirstWorm() {
         // Will attack firstWormInRange if found
-        // If not : Not Specified (Dig/Move Randomly)
+        // If not : Not Specified (Dig)
         if (currentWorm.id == 2 && currentWorm.banana.count > 0) {
             // Agent
             Worm enemyWorm = getWormInRangeBanana();
@@ -349,14 +349,16 @@ public class Bot {
             Direction direction = resolveDirection(currentWorm.position, enemyWorm.position);
             return new ShootCommand(direction);
         }
-        List<Cell> surroundingBlocks = getSurroundingCells(currentWorm.position.x, currentWorm.position.y);
-        int cellIdx = random.nextInt(surroundingBlocks.size());
-        Cell block = surroundingBlocks.get(cellIdx);
-        if (block.type == CellType.AIR) {
-            return new MoveCommand(block.x, block.y);
-        } else if (block.type == CellType.DIRT) {
-            return new DigCommand(block.x, block.y);
+        return digStrategy();
+    }
+
+    private Command digStrategy() {
+        List<Cell> surroundingBlocks = getSurroundingCells(currentWorm.diggingRange, currentWorm.position.x, currentWorm.position.y);
+        for (Cell block : surroundingBlocks) {
+            if (block.type == CellType.DIRT) {
+                return new DigCommand(block.x, block.y);
+            }
         }
-        return new DoNothingCommand();
+        return moveToMiddleStrategy();
     }
 }
